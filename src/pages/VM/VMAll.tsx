@@ -17,9 +17,12 @@ import {
 import {restfulApiConfig} from "../../Config";
 import Base from "../../components/Base";
 import {VMDetail} from "../../interface";
+import {useRecoilState} from "recoil";
+import {VMsState} from "../../api/Recoil";
 
 export default function VM() {
-    const [vms, setVMs] = useState<VMDetail[]>([]);
+    const [vms, setVMs] = useRecoilState(VMsState);
+    const tmpVMs:VMDetail[] = [];
     const navigate = useNavigate();
     const {enqueueSnackbar} = useSnackbar();
 
@@ -47,18 +50,21 @@ export default function VM() {
             enqueueSnackbar("Error: " + obj.error, {variant: "error"})
             return;
         }
-        let tmpVM: VMDetail[] = vms;
         if (obj.type <= 2) {
             for (let i = 0; i < obj.vm_detail.length; i++) {
-                if (vms?.find(vms => vms.vm?.UUID === obj.vm_detail[i].vm.UUID && vms.node === obj.vm_detail[i].node) == null) {
+                if (tmpVMs?.find(vms => vms.vm?.UUID === obj.vm_detail[i].vm.UUID && vms.node === obj.vm_detail[i].node) == null) {
                     console.log(obj.vm_detail[i])
-                    tmpVM.push(obj.vm_detail[i])
+                    tmpVMs.push(obj.vm_detail[i])
                 }
             }
         }
-        setVMs(tmpVM)
+        setVMs(tmpVMs)
         ref.current?.scrollIntoView()
     }, [lastMessage]);
+
+    useEffect(()=>{
+        console.log(vms)
+    },[vms])
 
     const clickDetailPage = (nodeID: number, uuid: string) => {
         navigate('/dashboard/vm/' + nodeID + '/' + uuid);
