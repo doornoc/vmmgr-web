@@ -7,6 +7,7 @@ import {
     Card, CardActions,
     CardContent,
     Container,
+    Grid,
     FormControl,
     FormControlLabel, InputBase,
     Paper,
@@ -14,6 +15,7 @@ import {
     RadioGroup,
     Typography
 } from "@mui/material";
+import { sizing } from '@mui/system'
 import {restfulApiConfig} from "../../Config";
 import Base from "../../components/Base";
 import {VMDetail} from "../../interface";
@@ -76,47 +78,51 @@ export default function VM() {
 
     return (
         <Base>
-            <Container component="main">
-                <br/>
-                <br/>
-                <h2>VM Lists</h2>
+            <Container component="main" sx={{ mt: 10}} >
+                <Typography variant="h4" component="h1">
+                    VM List
+                </Typography>
+                <Grid container spacing={2} >
                 {
                     vms?.map((vm: VMDetail) => (
-                        <Card>
-                            <CardContent>
-                                <Typography sx={{fontSize: 14}} color="text.secondary" gutterBottom>
-                                    {vm.node}
-                                </Typography>
-                                <Typography variant="h5" component="div">
-                                    {vm.vm.Title}
-                                </Typography>
-                                <Typography sx={{mb: 1.5}} color="text.secondary">
-                                    {vm.vm.UUID}
-                                </Typography>
-                                VCPU: {vm.vm.VCPU.Value}<br/>
-                                Mem: {vm.vm.CurrentMemory.Value} {vm.vm.CurrentMemory.Unit}
-                                {
-                                    vm.vm.Devices.Graphics != null &&
-                                  <div>
-                                    VNCPort: {vm.vm.Devices.Graphics[0].VNC.Port}<br/>VNCWebSocketPort: {vm.vm.Devices.Graphics[0].VNC.WebSocket}
-                                  </div>
-                                }
-                                {/*<VMStatus key={"status"} status={vm.status}/>*/}
-                                <br/><br/>
-                                {/*CPU: {vm.vcpu} Memory: {vm.memory}KB*/}
-                            </CardContent>
-                            <CardActions>
-                                {
-                                    vm.vm.Devices.Graphics != null &&
-                                  <Button variant="contained" color="primary" onClick={() =>
-                                      clickNoVNC(vm.node, vm.vm.Devices.Graphics[0].VNC.WebSocket)}> NoVNC </Button>
-                                }
+                        <Grid item xs={12} md={6} >
+                            <Card>
+                                <CardContent>
+                                    <Typography sx={{fontSize: 14}} color="text.secondary" gutterBottom>
+                                        {vm.node}
+                                    </Typography>
+                                    <Typography variant="h5" component="div">
+                                        {vm.vm.Title}
+                                    </Typography>
+                                    <Typography sx={{mb: 1.5}} color="text.secondary">
+                                        {vm.vm.UUID}
+                                    </Typography>
+                                    VCPU: {vm.vm.VCPU.Value}<br/>
+                                    Mem: {vm.vm.CurrentMemory.Value} {vm.vm.CurrentMemory.Unit}
+                                    {
+                                        vm.vm.Devices.Graphics != null &&
+                                    <div>
+                                        VNCPort: {vm.vm.Devices.Graphics[0].VNC.Port}<br/>VNCWebSocketPort: {vm.vm.Devices.Graphics[0].VNC.WebSocket}
+                                    </div>
+                                    }
+                                    {/*<VMStatus key={"status"} status={vm.status}/>*/}
+                                    <br/><br/>
+                                    {/*CPU: {vm.vcpu} Memory: {vm.memory}KB*/}
+                                </CardContent>
+                                <CardActions>
+                                    {
+                                        vm.vm.Devices.Graphics != null &&
+                                        <Button variant="contained" color="primary" onClick={() =>
+                                            clickNoVNC(vm.node, vm.vm.Devices.Graphics[0].VNC.WebSocket)}> NoVNC </Button>
+                                    }
 
-                                {/*<Button size="small" onClick={() => clickDetailPage(vm.node_id, vm.uuid)}>Detail</Button>*/}
-                            </CardActions>
-                        </Card>
+                                    {/*<Button size="small" onClick={() => clickDetailPage(vm.node_id, vm.uuid)}>Detail</Button>*/}
+                                </CardActions>
+                            </Card>
+                        </Grid>
                     ))
                 }
+                </Grid>
             </Container>
         </Base>
     );
