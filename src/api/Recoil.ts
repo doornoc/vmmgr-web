@@ -1,5 +1,5 @@
 import {atom} from "recoil";
-import {VMDetail, WebSocketResult} from "../interface";
+import {Hosts, VMDetail, WebSocketResult} from "../interface";
 
 export const WebSocketState = atom<WebSocketResult | null>({
     key: 'webSocketState',
@@ -9,5 +9,11 @@ export const WebSocketState = atom<WebSocketResult | null>({
 
 export const VMsState = atom<VMDetail[]>({
     key: 'VMS_STATE',
+    default: [],
+});
+
+
+export const HostsState = atom<Hosts[]>({
+    key: 'HOSTS_STATE',
     default: [],
 });
