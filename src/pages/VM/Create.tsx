@@ -22,7 +22,7 @@ import {
 } from '@mui/material'
 import {restfulApiConfig} from '../../Config'
 import Base from '../../components/Base'
-import {Hosts, NICs, ImageLists, Storages, VMDetail} from '../../interface'
+import {Hosts, NICs, ImageLists, Storages, VMDetail, InputStorages, InputNICs} from '../../interface'
 import {useRecoilState} from 'recoil'
 import {HostsState, VMsState} from '../../api/Recoil'
 
@@ -31,8 +31,8 @@ export default function Create() {
   const [storages, setStorages] = useState<Storages[]>([])
   const [storageLists, setStorageLists] = useState<ImageLists[]>([])
   const [nics, setNICs] = useState<NICs[]>([])
-  const [inputStorages, setInputStorages] = useState<any[]>([{}])
-  const [inputNICs, setInputNICs] = useState<any[]>([{}])
+  const [inputStorages, setInputStorages] = useState<InputStorages[]>([])
+  const [inputNICs, setInputNICs] = useState<InputNICs[]>([])
   const navigate = useNavigate()
   const {enqueueSnackbar} = useSnackbar()
   const req: any = {}
@@ -91,14 +91,11 @@ export default function Create() {
   }
 
   const addStorage = () => {
-    setInputStorages([
-      ...inputStorages,
-      {
-        path: 0,
-        size: 0,
-        order: 0,
-      },
-    ])
+    setInputStorages([...inputStorages, {
+      name: "",
+      image: "",
+      size: 0
+    }])
   }
 
   const deleteStorage = (del_index: number) => {
@@ -108,12 +105,89 @@ export default function Create() {
   }
 
   const addNIC = () => {
-    setInputNICs([...inputNICs, {}])
+    setInputNICs([...inputNICs, {
+      name: "",
+    }])
   }
 
   const deleteNIC = (del_index: number) => {
     setInputNICs((prevState) =>
       prevState.filter((_, index) => index !== del_index)
+    )
+  }
+
+  const create = () => {
+    req.is_cloud_init = false
+    let req_storages = []
+    let req_nics = []
+    let count = 0
+    for (const inputStorage of inputStorages) {
+      const tplStorage = storages.find(storage => storage.name === inputStorage.name)
+      if (tplStorage === undefined) {
+        return
+      }
+      let typeNum = 0
+      let path = inputStorage.name
+      if (tplStorage?.option.is_iso) {
+        typeNum = 1
+        path = inputStorage.image
+      }
+      if (count === 0) {
+        let boot: string
+        switch (typeNum) {
+          case 1:
+            boot = "cdrom"
+            break
+          case 2:
+            boot = "fd"
+            break
+          default:
+            boot = "hd"
+        }
+        req.boot = boot
+      }
+
+      req_storages.push({
+        type: typeNum,
+        file_type: 1,
+        path: path,
+        readonly: false,
+        size: inputStorage.size
+      })
+      count++
+    }
+
+    for (const inputNIC of inputNICs) {
+      const tplNIC = nics.find(nic => nic.name === inputNIC.name)
+      if (tplNIC === undefined) {
+        return
+      }
+
+      req_nics.push({
+        type: 0,
+        driver: 0,
+        mode: 0,
+        mac: "",
+        device: tplNIC.interface
+      })
+    }
+
+    req.disk = req_storages
+    req.nic = req_nics
+    // test start
+    req.memory = 2048
+    req.cpu = 2
+    req.name = "test"
+    req.hostname = "10.100.1.180"
+    // test end
+    console.log("req", req)
+
+    sendMessage(
+      JSON.stringify({
+        type: 51,
+        data: {hostname: req.hostname},
+        vm_input: req
+      })
     )
   }
 
@@ -292,7 +366,7 @@ export default function Create() {
                           setInputStorages((prevState) => {
                             return prevState.map((oldItem, oldIdx) => {
                               if (oldIdx === index) {
-                                return {...oldItem, size: event.target.value}
+                                return {...oldItem, size: Number(event.target.value)}
                               }
                               return oldItem
                             })
@@ -392,39 +466,13 @@ export default function Create() {
                           ))}
                         </Select>
                       </FormControl>
-                      <TextField
-                        required
-                        id="size"
-                        label="size"
-                        type="number"
-                        sx={{m: 1, width: '15ch'}}
-                        value={inputNICs[index].size ?? 0}
-                        InputLabelProps={{
-                          shrink: true,
-                        }}
-                        InputProps={{
-                          endAdornment: (
-                            <InputAdornment position="end">MB</InputAdornment>
-                          ),
-                        }}
-                        onChange={(event) => {
-                          setInputNICs((prevState) => {
-                            return prevState.map((oldItem, oldIdx) => {
-                              if (oldIdx === index) {
-                                return {...oldItem, size: event.target.value}
-                              }
-                              return oldItem
-                            })
-                          })
-                        }}
-                      />
                       {index !== 0 && (
                         <Button
                           size="small"
                           variant="contained"
                           color={'error'}
                           sx={{m: 2}}
-                          onClick={() => deleteStorage(index)}
+                          onClick={() => deleteNIC(index)}
                         >
                           削除
                         </Button>
@@ -470,6 +518,9 @@ export default function Create() {
             </Card>
             <br/>
           </Grid>
+          <Button size="small" onClick={() => create()}>
+            作成
+          </Button>
           <Grid item xs={12}>
             {/*<LinearProgress variant="determinate" value={progress}/>*/}
             {/*<br/>*/}

@@ -40,3 +40,13 @@ export interface NICs {
   comment: string
   interface: string
 }
+
+export interface InputStorages {
+  name: string
+  image: string
+  size: number
+}
+
+export interface InputNICs {
+  name: string
+}
