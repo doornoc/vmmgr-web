@@ -1,0 +1,9 @@
+version: '3.8'
+
+services:
+  web-admin:
+    image: yoneyan/vmmgr-web-admin:prod
+    container_name: web-admin
+    ports:
+      - 80:80
+    restart: always
