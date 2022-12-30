@@ -31,11 +31,11 @@ export default function Create() {
   const [storages, setStorages] = useState<Storages[]>([])
   const [storageLists, setStorageLists] = useState<ImageLists[]>([])
   const [nics, setNICs] = useState<NICs[]>([])
+  const [req, setReq] = useState<any>({})
   const [inputStorages, setInputStorages] = useState<InputStorages[]>([])
   const [inputNICs, setInputNICs] = useState<InputNICs[]>([])
   const navigate = useNavigate()
   const {enqueueSnackbar} = useSnackbar()
-  const req: any = {}
 
   // 1:有効 2:無効
   const {sendMessage, lastMessage, readyState} = useWebSocket(
@@ -175,9 +175,9 @@ export default function Create() {
     req.disk = req_storages
     req.nic = req_nics
     // test start
-    req.memory = 2048
-    req.cpu = 2
-    req.name = "test"
+    // req.memory = 2048
+    // req.cpu = 2
+    // req.name = "test"
     req.hostname = "10.100.1.180"
     // test end
     console.log("req", req)
@@ -211,7 +211,7 @@ export default function Create() {
                     label="Hosts"
                     value={req.hostname}
                     onChange={(event) => {
-                      req.hostname = event.target.value
+                      setReq({...req, hostname: event.target.value})
                       getTemplate(event.target.value)
                     }}
                   >
@@ -230,7 +230,7 @@ export default function Create() {
                   sx={{m: 1, width: '25ch'}}
                   rows={1}
                   value={req.name}
-                  onChange={(event) => (req.name = event.target.value)}
+                  onChange={(event) => setReq({...req, name: event.target.value})}
                   variant="outlined"
                 />
                 <br/>
@@ -245,7 +245,7 @@ export default function Create() {
                   InputLabelProps={{
                     shrink: true,
                   }}
-                  onChange={(event) => (req.cpu = event.target.value)}
+                  onChange={(event) => setReq({...req, cpu: Number(event.target.value)})}
                 />
                 <TextField
                   required
@@ -262,7 +262,7 @@ export default function Create() {
                       <InputAdornment position="end">MB</InputAdornment>
                     ),
                   }}
-                  onChange={(event) => (req.memory = event.target.value)}
+                  onChange={(event) => setReq({...req, memory: Number(event.target.value)})}
                 />
               </CardContent>
               <Card sx={{marginLeft: 2, marginRight: 10}}>
