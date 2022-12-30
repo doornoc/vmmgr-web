@@ -340,7 +340,7 @@ export default function Create() {
                                 .find((storageList) =>
                                   storageList.name === (inputStorages[index].name ?? '')
                                 )?.path?.map((storageList, idx) => (
-                                <MenuItem key={storageList} value={storageList}>
+                                <MenuItem key={"storageList_" + idx} value={storageList}>
                                   {storageList}
                                 </MenuItem>
                               ))}
@@ -459,8 +459,8 @@ export default function Create() {
                             })
                           }}
                         >
-                          {nics?.map((nic: NICs) => (
-                            <MenuItem key={nic.name} value={nic.name}>
+                          {nics?.map((nic: NICs, idx) => (
+                            <MenuItem key={"nic_" + idx} value={nic.name}>
                               {nic.name}({nic.comment})
                             </MenuItem>
                           ))}
