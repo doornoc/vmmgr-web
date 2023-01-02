@@ -40,7 +40,7 @@ export default function Base(props: any) {
                 List
               </Button>
               <Button
-                key={'list'}
+                key={'create'}
                 onClick={clickCreatePage}
                 sx={{color: '#fff'}}
               >
