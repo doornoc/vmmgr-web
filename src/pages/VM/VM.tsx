@@ -121,10 +121,9 @@ export default function VM() {
                   Mem: {vm.vm.CurrentMemory.Value} {vm.vm.CurrentMemory.Unit}
                   {vm.vm.Devices.Graphics != null && (
                     <div>
-                      VNCPort: {vm.vm.Devices.Graphics[0].VNC.Port}
+                      VNCPort: {vm.vm.Devices.Graphics[0].VNC?.Port ?? "None"}
                       <br/>
-                      VNCWebSocketPort:{' '}
-                      {vm.vm.Devices.Graphics[0].VNC.WebSocket}
+                      VNCWebSocketPort: {vm.vm.Devices.Graphics[0].VNC?.WebSocket ?? "None"}
                     </div>
                   )}
                   {/*<VMStatus key={"status"} status={vm.status}/>*/}
@@ -137,11 +136,7 @@ export default function VM() {
                     <Button
                       variant="contained"
                       color="primary"
-                      onClick={() =>
-                        clickNoVNC(
-                          vm.node,
-                          vm.vm.Devices.Graphics[0].VNC.WebSocket
-                        )
+                      onClick={() => clickNoVNC(vm.node, vm.vm.Devices.Graphics[0].VNC?.WebSocket)
                       }
                     >
                       {' '}
