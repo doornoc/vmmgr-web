@@ -37,22 +37,21 @@ import {
   TemplateNIC,
   TemplateList,
   TemplateStorage,
-  VMDetail,
   InputStorage,
   InputNIC,
-  InputCloudinitUser, InputCloudinitUserData, CreateVM, TemplateImage, InputCloutinit, Result
+  InputCloudinitUser, CreateVM, TemplateImage, InputCloutinit, Result
 } from '../../interface'
 import {useRecoilState} from 'recoil'
-import {HostsState, VMsState} from '../../api/Recoil'
+import {HostsState} from '../../api/Recoil'
 import {getArchID} from "../../api/Tool";
 import {CreateCloudinitRequest, CreateRequest} from "../../api/Create";
 
 export default function Create() {
   const [hosts, setHosts] = useRecoilState(HostsState)
-  const [host, setHost] = useState<string | undefined>(undefined)
+  const [host, setHost] = useState<string>("")
   const [template, setTemplate] = useState<{ storages: TemplateStorage[], list: TemplateList[], nics: TemplateNIC[], images: TemplateImage[] }>()
   const [req, setReq] = useState<CreateVM>({name: "", cpu: 0, memory: 0, is_cloudinit: false})
-  const [result, setResult] = useState<Result | undefined>(undefined)
+  const [result, setResult] = useState<Result>({created_at: "", type: 0, uuid: ""})
 
   // input
   const [inputPackage, setInputPackage] = useState<string>('')
@@ -360,7 +359,7 @@ export default function Create() {
                     labelId="host-select-label"
                     id="host-select-select"
                     label="Hosts"
-                    defaultValue={"none"}
+                    defaultValue={""}
                     value={host}
                     onChange={(event) => {
                       setHost(event.target.value)
@@ -390,38 +389,38 @@ export default function Create() {
                 <br/>
                 {
                   !req.is_cloudinit &&
-                    <Box>
-                        <TextField
-                            required
-                            id="cpu"
-                            label="cpu"
-                            type="number"
-                            variant="outlined"
-                            sx={{m: 1, width: '15ch'}}
-                            value={req.cpu}
-                            InputLabelProps={{
-                              shrink: true,
-                            }}
-                            onChange={(event) => setReq({...req, cpu: Number(event.target.value)})}
-                        />
-                        <TextField
-                            required
-                            id="memory"
-                            label="memory"
-                            type="number"
-                            sx={{m: 1, width: '15ch'}}
-                            value={req.memory}
-                            InputLabelProps={{
-                              shrink: true,
-                            }}
-                            InputProps={{
-                              endAdornment: (
-                                <InputAdornment position="end">MB</InputAdornment>
-                              ),
-                            }}
-                            onChange={(event) => setReq({...req, memory: Number(event.target.value)})}
-                        />
-                    </Box>
+                  <Box>
+                    <TextField
+                      required
+                      id="cpu"
+                      label="cpu"
+                      type="number"
+                      variant="outlined"
+                      sx={{m: 1, width: '15ch'}}
+                      value={req.cpu}
+                      InputLabelProps={{
+                        shrink: true,
+                      }}
+                      onChange={(event) => setReq({...req, cpu: Number(event.target.value)})}
+                    />
+                    <TextField
+                      required
+                      id="memory"
+                      label="memory"
+                      type="number"
+                      sx={{m: 1, width: '15ch'}}
+                      value={req.memory}
+                      InputLabelProps={{
+                        shrink: true,
+                      }}
+                      InputProps={{
+                        endAdornment: (
+                          <InputAdornment position="end">MB</InputAdornment>
+                        ),
+                      }}
+                      onChange={(event) => setReq({...req, memory: Number(event.target.value)})}
+                    />
+                  </Box>
                 }
               </CardContent>
               <FormGroup>
@@ -449,479 +448,520 @@ export default function Create() {
               </FormGroup>
               {
                 req.is_cloudinit && req.name !== "" &&
-                  <Card sx={{marginLeft: 2, marginRight: 10}}>
-                      <CardContent>
-                          <Typography variant="h5" component="div">
-                              CloudInit
-                          </Typography>
-                          <FormControl sx={{m: 3}} component="fieldset" variant="standard">
-                              <FormLabel component="legend">Template</FormLabel>
-                              <Select
-                                  labelId="cloudinit-select-id-label"
-                                  id="cloudinit-select-id"
-                                  label="cloudinit"
-                                  value={req.cloudinit?.id}
-                                  onChange={(event) => {
-                                    setReq({
-                                      ...req, cloudinit: {
-                                        ...req.cloudinit ?? {id: event.target.value, image_copy: "local", name: ""},
-                                        id: event.target.value,
-                                        image_copy: "local"
-                                      }
-                                    })
-                                  }}
-                              >
-                                {
-                                  template?.images?.map((image) => (
-                                    !image.disable &&
-                                    <MenuItem key={image.name} value={image.name}>
-                                      {image.name}({image.comment})
-                                    </MenuItem>
-                                  ))
-                                }
-                              </Select>
-                              <Select
-                                  labelId="cloudinit-spec-select-id-label"
-                                  id="cloudinit-spec-select-id"
-                                  label="spec_plan"
-                                // value={host}
-                                  onChange={(event) => {
-                                    let spec = template?.images?.find(image => image.name === req.cloudinit?.id)?.spec_plans?.find(spec => (spec.name === event.target.value))
-                                    if (spec === undefined) {
-                                      return
-                                    }
-                                    setReq({
-                                      ...req,
-                                      arch: getArchID(spec.arch), cpu: spec.cpu, memory: spec.memory, boot: "hd"
-                                    })
-                                  }}
-                              >
-                                {
-                                  template?.images?.find(image => image.name === req.cloudinit?.id)?.spec_plans?.map((spec) => (
-                                    !spec.disable &&
-                                    <MenuItem key={spec.name} value={spec.name}>
-                                        [{spec.name}] {spec.cpu}/{spec.memory}MB
-                                    </MenuItem>
-                                  ))
-                                }
-                              </Select>
-                              <Select
-                                  labelId="cloudinit-storage-select-id-label"
-                                  id="cloudinit-storage-select-id"
-                                  label="storage_plan"
-                                // value={host}
-                                  onChange={(event) => {
-                                    let valueSplit = (event.target.value as string).split('/')
-                                    let storage = template?.images?.find(image => image.name === req.cloudinit?.id)?.storage_plans?.find(storage => ((event.target.value as string).includes(storage.name)))
-                                    if (storage === undefined) {
-                                      return
-                                    }
-                                    setReq({
-                                      ...req, disk: [{
-                                        path: storage.storage_id,
-                                        size: Number(valueSplit[valueSplit.length - 1])
-                                      }]
-                                    })
-                                  }}
-                              >
-                                {
-                                  template?.images?.find(image => image.name === req.cloudinit?.id)?.storage_plans?.map((storage) => (
-                                    storage.size.map((size) => (
-                                      !storage.disable &&
-                                      <MenuItem key={storage.name + "/" + size} value={storage.name + "/" + size}>
-                                        {storage.name}({storage.storage_id}/{size}MB)
-                                      </MenuItem>
-                                    ))
-                                  ))
-                                }
-                              </Select>
-                          </FormControl>
-                          <FormControl sx={{m: 3}} component="fieldset" variant="standard">
-                              <FormLabel component="legend">Option</FormLabel>
-                              <FormGroup>
-                                  <FormControlLabel
-                                      control={
-                                        <Checkbox checked={req.cloudinit?.userdata?.packages_update}
-                                                  name="packages_update"
-                                                  onChange={(event) => {
-                                                    setReq({
-                                                      ...req, cloudinit: {
-                                                        ...req.cloudinit ?? {id: "", image_copy: "", name: ""},
-                                                        userdata: {
-                                                          ...req.cloudinit?.userdata,
-                                                          packages_update: event.target.checked
-                                                        }
-                                                      }
-                                                    })
-                                                  }}/>
-                                      }
-                                      label="packages_update"
-                                  />
-                                  <FormControlLabel
-                                      control={
-                                        <Checkbox checked={req.cloudinit?.userdata?.packages_upgrade}
-                                                  name="packages_upgrade"
-                                                  onChange={(event) => {
-                                                    setReq({
-                                                      ...req, cloudinit: {
-                                                        ...req.cloudinit ?? {id: "", image_copy: "", name: ""},
-                                                        userdata: {
-                                                          ...req.cloudinit?.userdata,
-                                                          packages_upgrade: event.target.checked
-                                                        }
-                                                      }
-                                                    })
-                                                  }}/>
-                                      }
-                                      label="packages_upgrade"
-                                  />
-                              </FormGroup>
-                          </FormControl>
-                          <br/>
-                          <FormControl sx={{m: 3}} component="fieldset" variant="standard">
-                              <Typography variant="h6" component="div">Install Packages</Typography>
-                              <br/>
-                              <Stack direction="row">
-                                {
-                                  req.cloudinit?.userdata?.packages?.map((package_name: string, index) => (
-                                    <Chip key={"cloudinit_package_" + index} color="primary" label={package_name}
-                                          sx={{marginRight: 0.5, marginBottom: 0.5}}
-                                          onDelete={() => deleteCloudinitPackage(index)}/>
-                                  ))
-                                }
-                              </Stack>
-                              <Stack direction="row" spacing={1}>
-                                  <TextField
-                                      required
-                                      id={"cloudinit_package"}
-                                      label="package"
-                                      sx={{m: 1, width: '30ch'}}
-                                      value={inputPackage}
+                <Card sx={{marginLeft: 2, marginRight: 10}}>
+                  <CardContent>
+                    <Typography variant="h5" component="div">
+                      CloudInit
+                    </Typography>
+                    <FormControl sx={{m: 3}} component="fieldset" variant="standard">
+                      <FormLabel component="legend">Template</FormLabel>
+                      <Select
+                        labelId="cloudinit-select-id-label"
+                        id="cloudinit-select-id"
+                        label="cloudinit"
+                        value={req.cloudinit?.id}
+                        onChange={(event) => {
+                          setReq({
+                            ...req, cloudinit: {
+                              ...req.cloudinit ?? {id: event.target.value, image_copy: "local", name: ""},
+                              id: event.target.value,
+                              image_copy: "local"
+                            }
+                          })
+                        }}
+                      >
+                        {
+                          template?.images?.map((image) => (
+                            !image.disable &&
+                            <MenuItem key={image.name} value={image.name}>
+                              {image.name}({image.comment})
+                            </MenuItem>
+                          ))
+                        }
+                      </Select>
+                      <Select
+                        labelId="cloudinit-spec-select-id-label"
+                        id="cloudinit-spec-select-id"
+                        label="spec_plan"
+                        // value={host}
+                        onChange={(event) => {
+                          let spec = template?.images?.find(image => image.name === req.cloudinit?.id)?.spec_plans?.find(spec => (spec.name === event.target.value))
+                          if (spec === undefined) {
+                            return
+                          }
+                          setReq({
+                            ...req,
+                            arch: getArchID(spec.arch), cpu: spec.cpu, memory: spec.memory, boot: "hd"
+                          })
+                        }}
+                      >
+                        {
+                          template?.images?.find(image => image.name === req.cloudinit?.id)?.spec_plans?.map((spec) => (
+                            !spec.disable &&
+                            <MenuItem key={spec.name} value={spec.name}>
+                              [{spec.name}] {spec.cpu}/{spec.memory}MB
+                            </MenuItem>
+                          ))
+                        }
+                      </Select>
+                      <Select
+                        labelId="cloudinit-storage-select-id-label"
+                        id="cloudinit-storage-select-id"
+                        label="storage_plan"
+                        // value={host}
+                        onChange={(event) => {
+                          let valueSplit = (event.target.value as string).split('/')
+                          let storage = template?.images?.find(image => image.name === req.cloudinit?.id)?.storage_plans?.find(storage => ((event.target.value as string).includes(storage.name)))
+                          if (storage === undefined) {
+                            return
+                          }
+                          setReq({
+                            ...req, disk: [{
+                              path: storage.storage_id,
+                              size: Number(valueSplit[valueSplit.length - 1])
+                            }]
+                          })
+                        }}
+                      >
+                        {
+                          template?.images?.find(image => image.name === req.cloudinit?.id)?.storage_plans?.map((storage) => (
+                            storage.size.map((size) => (
+                              !storage.disable &&
+                              <MenuItem key={storage.name + "/" + size} value={storage.name + "/" + size}>
+                                {storage.name}({storage.storage_id}/{size}MB)
+                              </MenuItem>
+                            ))
+                          ))
+                        }
+                      </Select>
+                    </FormControl>
+                    <FormControl sx={{m: 3}} component="fieldset" variant="standard">
+                      <FormLabel component="legend">Option</FormLabel>
+                      <FormGroup>
+                        <FormControlLabel
+                          control={
+                            <Checkbox checked={req.cloudinit?.userdata?.packages_update}
+                                      name="packages_update"
                                       onChange={(event) => {
-                                        setInputPackage(event.target.value)
-                                      }}
-                                  />
-                                  <Button size="small" variant="contained"
-                                          onClick={() => addCloudinitPackage(inputPackage)}>追加</Button>
-                              </Stack>
-                          </FormControl>
-                          <Typography variant="h6" component="div">Root User</Typography>
-                          <br/>
-                          <Box key={'cloudinit_user'}>
-                              <TextField
-                                  required
-                                  id={"cloudinit_user"}
-                                  label="username"
-                                  sx={{m: 1, width: '30ch'}}
-                                  value={req.cloudinit?.userdata?.user ?? ""}
-                                  onChange={(event) => {
-                                    setReq({
-                                      ...req, cloudinit: {
-                                        ...req.cloudinit ?? {id: "", image_copy: "", name: ""},
-                                        userdata: {...req.cloudinit?.userdata, user: event.target.value}
-                                      }
-                                    })
-                                  }}
-                              />
-                              <TextField
-                                  required
-                                  id={"cloudinit_password"}
-                                  label="password"
-                                  sx={{m: 1, width: '30ch'}}
-                                  value={req.cloudinit?.userdata?.password ?? ""}
-                                  onChange={(event) => {
-                                    setReq({
-                                      ...req, cloudinit: {
-                                        ...req.cloudinit ?? {id: "", image_copy: "", name: ""},
-                                        userdata: {...req.cloudinit?.userdata, password: event.target.value}
-                                      }
-                                    })
-                                  }}
-                                  type="password"
-                              />
-                              <TextField
-                                  required
-                                  id={"cloudinit_password_verify"}
-                                  label="password verify"
-                                  sx={{m: 1, width: '30ch'}}
-                                  value={req.cloudinit?.userdata?.password_verify ?? ""}
-                                  onChange={(event) => {
-                                    setReq({
-                                      ...req, cloudinit: {
-                                        ...req.cloudinit ?? {id: "", image_copy: "", name: ""},
-                                        userdata: {...req.cloudinit?.userdata, password_verify: event.target.value}
-                                      }
-                                    })
-                                  }}
-                                  type="password_verify"
-                              />
-                              <br/>
-                              <Typography variant="h6" component="div">SSH Authorized Keys</Typography>
-                              <br/>
-                            {
-                              req.cloudinit?.userdata?.ssh_authorized_keys?.map((sshKey: string, index) => (
-                                <Chip key={"cloudinit_ssh_authorized_keys_" + index}
-                                      color="primary"
-                                      label={sshKey}
-                                      sx={{marginRight: 0.5, marginBottom: 0.5}}
-                                      onDelete={() => {
-                                        let baseSSHAuthorizedKeys = req.cloudinit?.userdata?.ssh_authorized_keys ?? []
-                                        let sshAuthorizedKeys = undefined
-                                        if ((baseSSHAuthorizedKeys.length ?? 0) !== 0) {
-                                          sshAuthorizedKeys = baseSSHAuthorizedKeys.filter((_, idx) => idx !== index)
-                                        }
                                         setReq({
                                           ...req, cloudinit: {
                                             ...req.cloudinit ?? {id: "", image_copy: "", name: ""},
-                                            userdata: {ssh_authorized_keys: sshAuthorizedKeys}
+                                            userdata: {
+                                              ...req.cloudinit?.userdata,
+                                              packages_update: event.target.checked
+                                            }
                                           }
                                         })
                                       }}/>
+                          }
+                          label="packages_update"
+                        />
+                        <FormControlLabel
+                          control={
+                            <Checkbox checked={req.cloudinit?.userdata?.packages_upgrade}
+                                      name="packages_upgrade"
+                                      onChange={(event) => {
+                                        setReq({
+                                          ...req, cloudinit: {
+                                            ...req.cloudinit ?? {id: "", image_copy: "", name: ""},
+                                            userdata: {
+                                              ...req.cloudinit?.userdata,
+                                              packages_upgrade: event.target.checked
+                                            }
+                                          }
+                                        })
+                                      }}/>
+                          }
+                          label="packages_upgrade"
+                        />
+                      </FormGroup>
+                    </FormControl>
+                    <br/>
+                    <FormControl sx={{m: 3}} component="fieldset" variant="standard">
+                      <Typography variant="h6" component="div">Install Packages</Typography>
+                      <br/>
+                      <Stack direction="row">
+                        {
+                          req.cloudinit?.userdata?.packages?.map((package_name: string, index) => (
+                            <Chip key={"cloudinit_package_" + index} color="primary" label={package_name}
+                                  sx={{marginRight: 0.5, marginBottom: 0.5}}
+                                  onDelete={() => deleteCloudinitPackage(index)}/>
+                          ))
+                        }
+                      </Stack>
+                      <Stack direction="row" spacing={1}>
+                        <TextField
+                          required
+                          id={"cloudinit_package"}
+                          label="package"
+                          sx={{m: 1, width: '30ch'}}
+                          value={inputPackage}
+                          onChange={(event) => {
+                            setInputPackage(event.target.value)
+                          }}
+                        />
+                        <Button size="small" variant="contained"
+                                onClick={() => addCloudinitPackage(inputPackage)}>追加</Button>
+                      </Stack>
+                    </FormControl>
+                    <Typography variant="h6" component="div">Root User</Typography>
+                    <br/>
+                    <Box key={'cloudinit_user'}>
+                      <TextField
+                        required
+                        id={"cloudinit_user"}
+                        label="username"
+                        sx={{m: 1, width: '30ch'}}
+                        value={req.cloudinit?.userdata?.user ?? ""}
+                        onChange={(event) => {
+                          setReq({
+                            ...req, cloudinit: {
+                              ...req.cloudinit ?? {id: "", image_copy: "", name: ""},
+                              userdata: {...req.cloudinit?.userdata, user: event.target.value}
+                            }
+                          })
+                        }}
+                      />
+                      <TextField
+                        required
+                        id={"cloudinit_password"}
+                        label="password"
+                        sx={{m: 1, width: '30ch'}}
+                        value={req.cloudinit?.userdata?.password ?? ""}
+                        onChange={(event) => {
+                          setReq({
+                            ...req, cloudinit: {
+                              ...req.cloudinit ?? {id: "", image_copy: "", name: ""},
+                              userdata: {...req.cloudinit?.userdata, password: event.target.value}
+                            }
+                          })
+                        }}
+                        type="password"
+                      />
+                      <TextField
+                        required
+                        id={"cloudinit_password_verify"}
+                        label="password verify"
+                        sx={{m: 1, width: '30ch'}}
+                        value={req.cloudinit?.userdata?.password_verify ?? ""}
+                        onChange={(event) => {
+                          setReq({
+                            ...req, cloudinit: {
+                              ...req.cloudinit ?? {id: "", image_copy: "", name: ""},
+                              userdata: {...req.cloudinit?.userdata, password_verify: event.target.value}
+                            }
+                          })
+                        }}
+                        type="password_verify"
+                      />
+                      <br/>
+                      <Typography variant="h6" component="div">SSH Authorized Keys</Typography>
+                      <br/>
+                      {
+                        req.cloudinit?.userdata?.ssh_authorized_keys?.map((sshKey: string, index) => (
+                          <Chip key={"cloudinit_ssh_authorized_keys_" + index}
+                                color="primary"
+                                label={sshKey}
+                                sx={{marginRight: 0.5, marginBottom: 0.5}}
+                                onDelete={() => {
+                                  let baseSSHAuthorizedKeys = req.cloudinit?.userdata?.ssh_authorized_keys ?? []
+                                  let sshAuthorizedKeys = undefined
+                                  if ((baseSSHAuthorizedKeys.length ?? 0) !== 0) {
+                                    sshAuthorizedKeys = baseSSHAuthorizedKeys.filter((_, idx) => idx !== index)
+                                  }
+                                  setReq({
+                                    ...req, cloudinit: {
+                                      ...req.cloudinit ?? {id: "", image_copy: "", name: ""},
+                                      userdata: {ssh_authorized_keys: sshAuthorizedKeys}
+                                    }
+                                  })
+                                }}/>
+                        ))
+                      }
+                      <Stack direction="row" spacing={1}>
+                        <TextField
+                          required
+                          id={"cloudinit_user_input_ssh_authorized_keys"}
+                          label="ssh_authorized_keys"
+                          sx={{m: 1, width: '100ch'}}
+                          value={inputSSHAuthorizedKeys}
+                          onChange={(event) => {
+                            setInputSSHAuthorizedKeys(event.target.value)
+                          }}
+                        />
+                        <Button size="small" variant="contained"
+                                onClick={() => {
+                                  let ssh_authorized_keys = req.cloudinit?.userdata?.ssh_authorized_keys ?? []
+                                  ssh_authorized_keys.push(inputSSHAuthorizedKeys)
+                                  setReq({
+                                    ...req, cloudinit: {
+                                      ...req.cloudinit ?? {id: "", image_copy: "", name: ""},
+                                      userdata: {ssh_authorized_keys}
+                                    }
+                                  })
+                                }
+                                }>追加</Button>
+                      </Stack>
+                      <br/>
+                      <FormControlLabel
+                        control={
+                          <Checkbox checked={req.cloudinit?.userdata?.ssh_pwauth} name="SSHPWAuth"
+                                    onChange={(event) => {
+                                      setReq({
+                                        ...req, cloudinit: {
+                                          ...req.cloudinit ?? {id: "", image_copy: "", name: ""},
+                                          userdata: {
+                                            ...req.cloudinit?.userdata,
+                                            ssh_pwauth: event.target.checked
+                                          }
+                                        }
+                                      })
+                                    }}
+                          />
+                        }
+                        label="SSHPWAuth"
+                      />
+                    </Box>
+                    <Typography variant="h6" component="div">User認証</Typography>
+                    <br/>
+                    <FormControl sx={{m: 3}} component="fieldset" variant="standard">
+                      {
+                        req.cloudinit?.userdata?.users?.map((user: InputCloudinitUser, index) => (
+                          <Box key={'cloudinit_user_' + index}>
+                            <Chip label={index + 1} variant="outlined"/>
+                            <TextField
+                              required
+                              id={"cloudinit_user_" + index}
+                              label="username"
+                              sx={{m: 1, width: '30ch'}}
+                              value={user.name ?? ""}
+                              onChange={(event) => {
+                                let users = req.cloudinit?.userdata?.users
+                                if (users !== undefined) {
+                                  users[index].name = event.target.value
+                                  setReq({
+                                    ...req, cloudinit: {
+                                      ...req.cloudinit ?? {id: "", image_copy: "", name: ""},
+                                      userdata: {...req.cloudinit?.userdata, users}
+                                    }
+                                  })
+                                }
+                              }}
+                            />
+                            <TextField
+                              required
+                              id={"cloudinit_password_" + index}
+                              label="password"
+                              sx={{m: 1, width: '30ch'}}
+                              value={user.password ?? ""}
+                              onChange={(event) => {
+                                let users = req.cloudinit?.userdata?.users
+                                if (users !== undefined) {
+                                  users[index].password = event.target.value
+                                  setReq({
+                                    ...req, cloudinit: {
+                                      ...req.cloudinit ?? {id: "", image_copy: "", name: ""},
+                                      userdata: {...req.cloudinit?.userdata, users}
+                                    }
+                                  })
+                                }
+                              }}
+                              type="password"
+                            />
+                            <TextField
+                              required
+                              id={"cloudinit_password_verify_" + index}
+                              label="password verify"
+                              sx={{m: 1, width: '30ch'}}
+                              value={user.password_verify ?? ""}
+                              onChange={(event) => {
+                                let users = req.cloudinit?.userdata?.users
+                                if (users !== undefined) {
+                                  users[index].password_verify = event.target.value
+                                  setReq({
+                                    ...req, cloudinit: {
+                                      ...req.cloudinit ?? {id: "", image_copy: "", name: ""},
+                                      userdata: {...req.cloudinit?.userdata, users}
+                                    }
+                                  })
+                                }
+                              }}
+                              type="password_verify"
+                            />
+                            <br/>
+                            <Typography variant="h6" component="div">Sudo</Typography>
+                            <br/>
+                            {
+                              user.sudo?.map((sudo: string, index2) => (
+                                <Chip key={"cloudinit_user_" + index + "_sudo_" + index2} color="primary"
+                                      label={sudo}
+                                      sx={{marginRight: 0.5, marginBottom: 0.5}}
+                                      onDelete={() => deleteCloudinitSudo(index, index2)}/>
                               ))
                             }
-                              <Stack direction="row" spacing={1}>
-                                  <TextField
-                                      required
-                                      id={"cloudinit_user_input_ssh_authorized_keys"}
-                                      label="ssh_authorized_keys"
-                                      sx={{m: 1, width: '100ch'}}
-                                      value={inputSSHAuthorizedKeys}
-                                      onChange={(event) => {
-                                        setInputSSHAuthorizedKeys(event.target.value)
-                                      }}
-                                  />
-                                  <Button size="small" variant="contained"
-                                          onClick={() => {
-                                            let ssh_authorized_keys = req.cloudinit?.userdata?.ssh_authorized_keys ?? []
-                                            ssh_authorized_keys.push(inputSSHAuthorizedKeys)
-                                            setReq({
-                                              ...req, cloudinit: {
-                                                ...req.cloudinit ?? {id: "", image_copy: "", name: ""},
-                                                userdata: {ssh_authorized_keys}
-                                              }
-                                            })
-                                          }
-                                          }>追加</Button>
-                              </Stack>
-                              <br/>
-                              <FormControlLabel
-                                  control={
-                                    <Checkbox checked={req.cloudinit?.userdata?.ssh_pwauth} name="SSHPWAuth"
-                                              onChange={(event) => {
-                                                setReq({
-                                                  ...req, cloudinit: {
-                                                    ...req.cloudinit ?? {id: "", image_copy: "", name: ""},
-                                                    userdata: {
-                                                      ...req.cloudinit?.userdata,
-                                                      ssh_pwauth: event.target.checked
-                                                    }
-                                                  }
-                                                })
-                                              }}
-                                    />
-                                  }
-                                  label="SSHPWAuth"
+                            <Stack direction="row" spacing={1}>
+                              <TextField
+                                required
+                                id={"cloudinit_user_" + index + "_input_sudo"}
+                                label="sudo"
+                                sx={{m: 1, width: '30ch'}}
+                                value={inputSudo}
+                                onChange={(event) => {
+                                  setInputSudo(event.target.value)
+                                }}
                               />
-                          </Box>
-                          <Typography variant="h6" component="div">User認証</Typography>
-                          <br/>
-                          <FormControl sx={{m: 3}} component="fieldset" variant="standard">
+                              <Button size="small" variant="contained"
+                                      onClick={() => addCloudinitSudo(inputSudo, index)}>追加</Button>
+                            </Stack>
+                            <br/>
+                            <Typography variant="h6" component="div">SSH Authorized Keys</Typography>
+                            <br/>
                             {
-                              req.cloudinit?.userdata?.users?.map((user: InputCloudinitUser, index) => (
-                                <Box key={'cloudinit_user_' + index}>
-                                  <Chip label={index + 1} variant="outlined"/>
-                                  <TextField
-                                    required
-                                    id={"cloudinit_user_" + index}
-                                    label="username"
-                                    sx={{m: 1, width: '30ch'}}
-                                    value={user.name ?? ""}
-                                    onChange={(event) => {
-                                      let users = req.cloudinit?.userdata?.users
-                                      if (users !== undefined) {
-                                        users[index].name = event.target.value
-                                        setReq({
-                                          ...req, cloudinit: {
-                                            ...req.cloudinit ?? {id: "", image_copy: "", name: ""},
-                                            userdata: {...req.cloudinit?.userdata, users}
-                                          }
-                                        })
-                                      }
-                                    }}
-                                  />
-                                  <TextField
-                                    required
-                                    id={"cloudinit_password_" + index}
-                                    label="password"
-                                    sx={{m: 1, width: '30ch'}}
-                                    value={user.password ?? ""}
-                                    onChange={(event) => {
-                                      let users = req.cloudinit?.userdata?.users
-                                      if (users !== undefined) {
-                                        users[index].password = event.target.value
-                                        setReq({
-                                          ...req, cloudinit: {
-                                            ...req.cloudinit ?? {id: "", image_copy: "", name: ""},
-                                            userdata: {...req.cloudinit?.userdata, users}
-                                          }
-                                        })
-                                      }
-                                    }}
-                                    type="password"
-                                  />
-                                  <TextField
-                                    required
-                                    id={"cloudinit_password_verify_" + index}
-                                    label="password verify"
-                                    sx={{m: 1, width: '30ch'}}
-                                    value={user.password_verify ?? ""}
-                                    onChange={(event) => {
-                                      let users = req.cloudinit?.userdata?.users
-                                      if (users !== undefined) {
-                                        users[index].password_verify = event.target.value
-                                        setReq({
-                                          ...req, cloudinit: {
-                                            ...req.cloudinit ?? {id: "", image_copy: "", name: ""},
-                                            userdata: {...req.cloudinit?.userdata, users}
-                                          }
-                                        })
-                                      }
-                                    }}
-                                    type="password_verify"
-                                  />
-                                  <br/>
-                                  <Typography variant="h6" component="div">Sudo</Typography>
-                                  <br/>
-                                  {
-                                    user.sudo?.map((sudo: string, index2) => (
-                                      <Chip key={"cloudinit_user_" + index + "_sudo_" + index2} color="primary"
-                                            label={sudo}
-                                            sx={{marginRight: 0.5, marginBottom: 0.5}}
-                                            onDelete={() => deleteCloudinitSudo(index, index2)}/>
-                                    ))
-                                  }
-                                  <Stack direction="row" spacing={1}>
-                                    <TextField
-                                      required
-                                      id={"cloudinit_user_" + index + "_input_sudo"}
-                                      label="sudo"
-                                      sx={{m: 1, width: '30ch'}}
-                                      value={inputSudo}
-                                      onChange={(event) => {
-                                        setInputSudo(event.target.value)
-                                      }}
-                                    />
-                                    <Button size="small" variant="contained"
-                                            onClick={() => addCloudinitSudo(inputSudo, index)}>追加</Button>
-                                  </Stack>
-                                  <br/>
-                                  <Typography variant="h6" component="div">SSH Authorized Keys</Typography>
-                                  <br/>
-                                  {
-                                    user.ssh_authorized_keys?.map((sshKey: string, index2) => (
-                                      <Chip key={"cloudinit_user_" + index + "_ssh_authorized_keys_" + index2}
-                                            color="primary"
-                                            label={sshKey}
-                                            sx={{marginRight: 0.5, marginBottom: 0.5}}
-                                            onDelete={() => deleteCloudinitSSHAuthorizedKeys(index, index2)}/>
-                                    ))
-                                  }
-                                  <Stack direction="row" spacing={1}>
-                                    <TextField
-                                      required
-                                      id={"cloudinit_user_" + index + "_input_ssh_authorized_keys"}
-                                      label="ssh_authorized_keys"
-                                      sx={{m: 1, width: '100ch'}}
-                                      value={inputSSHAuthorizedKeys}
-                                      onChange={(event) => {
-                                        setInputSSHAuthorizedKeys(event.target.value)
-                                      }}
-                                    />
-                                    <Button size="small" variant="contained"
-                                            onClick={() => addCloudinitSSHAuthorizedKeys(inputSSHAuthorizedKeys, index)}>追加</Button>
-                                  </Stack>
-                                  <br/>
-                                  <FormControlLabel
-                                    control={
-                                      <Checkbox checked={user?.ssh_pwauth} name="SSHPWAuth"
-                                                onChange={(event) => {
-                                                  let users = req.cloudinit?.userdata?.users
-                                                  if (users !== undefined) {
-                                                    users[index].ssh_pwauth = event.target.checked
-                                                    setReq({
-                                                      ...req, cloudinit: {
-                                                        ...req.cloudinit ?? {id: "", image_copy: "", name: ""},
-                                                        userdata: {...req.cloudinit?.userdata, users}
-                                                      }
-                                                    })
-                                                  }
-                                                }}
-                                      />
-                                    }
-                                    label="SSHPWAuth"
-                                  />
-                                  <FormControlLabel
-                                    control={
-                                      <Checkbox checked={user?.ssh_pwauth} name="LockPasswd"
-                                                onChange={(event) => {
-                                                  let users = req.cloudinit?.userdata?.users
-                                                  if (users !== undefined) {
-                                                    users[index].lock_passwd = event.target.checked
-                                                    setReq({
-                                                      ...req, cloudinit: {
-                                                        ...req.cloudinit ?? {id: "", image_copy: "", name: ""},
-                                                        userdata: {...req.cloudinit?.userdata, users}
-                                                      }
-                                                    })
-                                                  }
-                                                }}
-                                      />
-                                    }
-                                    label="LockPasswd"
-                                  />
-                                  {
-                                    index !== 0 && (
-                                      <Button
-                                        size="small"
-                                        variant="contained"
-                                        color={'error'}
-                                        sx={{m: 2}}
-                                        onClick={() => deleteCloudinitUser(index)}
-                                      >
-                                        削除
-                                      </Button>
-                                    )
-                                  }
-                                </Box>
-                              ))}
-                          </FormControl>
-                          <Button variant="contained" size="small" onClick={() => addCloudinitUser()}>
-                              追加
-                          </Button>
-                      </CardContent>
-                  </Card>
+                              user.ssh_authorized_keys?.map((sshKey: string, index2) => (
+                                <Chip key={"cloudinit_user_" + index + "_ssh_authorized_keys_" + index2}
+                                      color="primary"
+                                      label={sshKey}
+                                      sx={{marginRight: 0.5, marginBottom: 0.5}}
+                                      onDelete={() => deleteCloudinitSSHAuthorizedKeys(index, index2)}/>
+                              ))
+                            }
+                            <Stack direction="row" spacing={1}>
+                              <TextField
+                                required
+                                id={"cloudinit_user_" + index + "_input_ssh_authorized_keys"}
+                                label="ssh_authorized_keys"
+                                sx={{m: 1, width: '100ch'}}
+                                value={inputSSHAuthorizedKeys}
+                                onChange={(event) => {
+                                  setInputSSHAuthorizedKeys(event.target.value)
+                                }}
+                              />
+                              <Button size="small" variant="contained"
+                                      onClick={() => addCloudinitSSHAuthorizedKeys(inputSSHAuthorizedKeys, index)}>追加</Button>
+                            </Stack>
+                            <br/>
+                            <FormControlLabel
+                              control={
+                                <Checkbox checked={user?.ssh_pwauth} name="SSHPWAuth"
+                                          onChange={(event) => {
+                                            let users = req.cloudinit?.userdata?.users
+                                            if (users !== undefined) {
+                                              users[index].ssh_pwauth = event.target.checked
+                                              setReq({
+                                                ...req, cloudinit: {
+                                                  ...req.cloudinit ?? {id: "", image_copy: "", name: ""},
+                                                  userdata: {...req.cloudinit?.userdata, users}
+                                                }
+                                              })
+                                            }
+                                          }}
+                                />
+                              }
+                              label="SSHPWAuth"
+                            />
+                            <FormControlLabel
+                              control={
+                                <Checkbox checked={user?.ssh_pwauth} name="LockPasswd"
+                                          onChange={(event) => {
+                                            let users = req.cloudinit?.userdata?.users
+                                            if (users !== undefined) {
+                                              users[index].lock_passwd = event.target.checked
+                                              setReq({
+                                                ...req, cloudinit: {
+                                                  ...req.cloudinit ?? {id: "", image_copy: "", name: ""},
+                                                  userdata: {...req.cloudinit?.userdata, users}
+                                                }
+                                              })
+                                            }
+                                          }}
+                                />
+                              }
+                              label="LockPasswd"
+                            />
+                            {
+                              index !== 0 && (
+                                <Button
+                                  size="small"
+                                  variant="contained"
+                                  color={'error'}
+                                  sx={{m: 2}}
+                                  onClick={() => deleteCloudinitUser(index)}
+                                >
+                                  削除
+                                </Button>
+                              )
+                            }
+                          </Box>
+                        ))}
+                    </FormControl>
+                    <Button variant="contained" size="small" onClick={() => addCloudinitUser()}>
+                      追加
+                    </Button>
+                  </CardContent>
+                </Card>
               }
               {
                 !req.is_cloudinit &&
-                  <Card sx={{marginLeft: 2, marginRight: 10}}>
-                      <CardContent>
-                          <Typography variant="h5" component="div">
-                              storage
-                          </Typography>
-                          <br/>
-                        {
-                          req.disk?.map((storage: InputStorage, index) => (
-                            <Box key={'storage_' + index}>
-                              <Chip label={index + 1} variant="outlined"/>
+                <Card sx={{marginLeft: 2, marginRight: 10}}>
+                  <CardContent>
+                    <Typography variant="h5" component="div">
+                      storage
+                    </Typography>
+                    <br/>
+                    {
+                      req.disk?.map((storage: InputStorage, index) => (
+                        <Box key={'storage_' + index}>
+                          <Chip label={index + 1} variant="outlined"/>
+                          <FormControl sx={{m: 1, width: '30ch'}}>
+                            <InputLabel id="storage-select-label">
+                              Storage
+                            </InputLabel>
+                            <Select
+                              labelId="storage-select-label"
+                              id="storage-select"
+                              value={storage.path ?? ''}
+                              label="storage"
+                              onChange={(event) => {
+                                setReq((prevState) => {
+                                  return {
+                                    ...prevState, disk: prevState.disk?.map((oldItem, oldIdx) => {
+                                      if (oldIdx === index) {
+                                        return {
+                                          ...oldItem,
+                                          name: event.target.value,
+                                        }
+                                      }
+                                      return oldItem
+                                    })
+                                  }
+                                })
+                              }}
+                            >
+                              {
+                                template?.storages?.map((storage: TemplateStorage) => (
+                                  <MenuItem key={storage.name} value={storage.name}>
+                                    {storage.name}({storage.comment})
+                                  </MenuItem>
+                                ))
+                              }
+                            </Select>
+                          </FormControl>
+                          {
+                            (
+                              template?.storages !== undefined &&
+                              (template?.storages.find((storage) => req.disk !== undefined && storage.name === req.disk[index].path
+                              )?.option.is_iso)
+                            ) && (
+                              // inputStorages[index]. ?? ""
                               <FormControl sx={{m: 1, width: '30ch'}}>
-                                <InputLabel id="storage-select-label">
-                                  Storage
+                                <InputLabel id="image-list-select-label">
+                                  Image List
                                 </InputLabel>
                                 <Select
-                                  labelId="storage-select-label"
-                                  id="storage-select"
-                                  value={storage.path ?? ''}
-                                  label="storage"
+                                  labelId="image-list-select-label"
+                                  id="image-list-select"
+                                  value={storage.image ?? ''}
+                                  label="image-list"
                                   onChange={(event) => {
                                     setReq((prevState) => {
                                       return {
@@ -929,7 +969,7 @@ export default function Create() {
                                           if (oldIdx === index) {
                                             return {
                                               ...oldItem,
-                                              name: event.target.value,
+                                              image: event.target.value,
                                             }
                                           }
                                           return oldItem
@@ -939,143 +979,102 @@ export default function Create() {
                                   }}
                                 >
                                   {
-                                    template?.storages?.map((storage: TemplateStorage) => (
-                                      <MenuItem key={storage.name} value={storage.name}>
-                                        {storage.name}({storage.comment})
+                                    template?.list.find((image) =>
+                                      req.disk !== undefined && image.name === req.disk[index].path
+                                    )?.path?.map((storageList, idx) => (
+                                      <MenuItem key={"storageList_" + idx} value={storageList}>
+                                        {storageList}
                                       </MenuItem>
                                     ))
                                   }
                                 </Select>
                               </FormControl>
-                              {
-                                (
-                                  template?.storages !== undefined &&
-                                  (template?.storages.find((storage) => req.disk !== undefined && storage.name === req.disk[index].path
-                                  )?.option.is_iso)
-                                ) && (
-                                  // inputStorages[index]. ?? ""
-                                  <FormControl sx={{m: 1, width: '30ch'}}>
-                                    <InputLabel id="image-list-select-label">
-                                      Image List
-                                    </InputLabel>
-                                    <Select
-                                      labelId="image-list-select-label"
-                                      id="image-list-select"
-                                      value={storage.image ?? ''}
-                                      label="image-list"
-                                      onChange={(event) => {
-                                        setReq((prevState) => {
-                                          return {
-                                            ...prevState, disk: prevState.disk?.map((oldItem, oldIdx) => {
-                                              if (oldIdx === index) {
-                                                return {
-                                                  ...oldItem,
-                                                  image: event.target.value,
-                                                }
-                                              }
-                                              return oldItem
-                                            })
-                                          }
-                                        })
-                                      }}
-                                    >
-                                      {
-                                        template?.list.find((image) =>
-                                          req.disk !== undefined && image.name === req.disk[index].path
-                                        )?.path?.map((storageList, idx) => (
-                                          <MenuItem key={"storageList_" + idx} value={storageList}>
-                                            {storageList}
-                                          </MenuItem>
-                                        ))
+                            )}
+                          <TextField
+                            required
+                            id="size"
+                            label="size"
+                            type="number"
+                            sx={{m: 1, width: '15ch'}}
+                            value={storage.size ?? 0}
+                            InputLabelProps={{
+                              shrink: true,
+                            }}
+                            InputProps={{
+                              endAdornment: (
+                                <InputAdornment position="end">MB</InputAdornment>
+                              ),
+                            }}
+                            onChange={(event) => {
+                              setReq((prevState) => {
+                                return {
+                                  ...prevState, disk: prevState.disk?.map((oldItem, oldIdx) => {
+                                    if (oldIdx === index) {
+                                      return {
+                                        ...oldItem,
+                                        size: Number(event.target.value),
                                       }
-                                    </Select>
-                                  </FormControl>
-                                )}
-                              <TextField
-                                required
-                                id="size"
-                                label="size"
-                                type="number"
-                                sx={{m: 1, width: '15ch'}}
-                                value={storage.size ?? 0}
-                                InputLabelProps={{
-                                  shrink: true,
-                                }}
-                                InputProps={{
-                                  endAdornment: (
-                                    <InputAdornment position="end">MB</InputAdornment>
-                                  ),
-                                }}
-                                onChange={(event) => {
-                                  setReq((prevState) => {
-                                    return {
-                                      ...prevState, disk: prevState.disk?.map((oldItem, oldIdx) => {
-                                        if (oldIdx === index) {
-                                          return {
-                                            ...oldItem,
-                                            size: Number(event.target.value),
-                                          }
-                                        }
-                                        return oldItem
-                                      })
                                     }
+                                    return oldItem
                                   })
+                                }
+                              })
+                            }}
+                          />
+                          {
+                            index !== 0 && (
+                              <Button
+                                size="small"
+                                variant="contained"
+                                color={'error'}
+                                sx={{m: 2}}
+                                onClick={() => deleteStorage(index)}
+                              >
+                                削除
+                              </Button>
+                            )}
+                          <ButtonGroup>
+                            {index !== 0 && (
+                              <Button
+                                size="small"
+                                onClick={() => {
+                                  if (req.disk !== undefined) {
+                                    let newArr = req.disk.concat()
+                                    newArr[index] = req.disk[index - 1]
+                                    newArr[index - 1] = req.disk[index]
+                                    setReq({...req, disk: newArr})
+                                  }
                                 }}
-                              />
-                              {
-                                index !== 0 && (
-                                  <Button
-                                    size="small"
-                                    variant="contained"
-                                    color={'error'}
-                                    sx={{m: 2}}
-                                    onClick={() => deleteStorage(index)}
-                                  >
-                                    削除
-                                  </Button>
-                                )}
-                              <ButtonGroup>
-                                {index !== 0 && (
-                                  <Button
-                                    size="small"
-                                    onClick={() => {
-                                      if (req.disk !== undefined) {
-                                        let newArr = req.disk.concat()
-                                        newArr[index] = req.disk[index - 1]
-                                        newArr[index - 1] = req.disk[index]
-                                        setReq({...req, disk: newArr})
-                                      }
-                                    }}
-                                  >
-                                    ↑
-                                  </Button>
-                                )}
-                                {req.disk?.length !== 1 &&
-                                  req.disk?.length !== index + 1 && (
-                                    <Button
-                                      size="small"
-                                      onClick={() => {
-                                        if (req.disk !== undefined) {
-                                          let newArr = req.disk.concat()
-                                          newArr[index + 1] = req.disk[index]
-                                          newArr[index] = req.disk[index + 1]
-                                          setReq({...req, disk: newArr})
-                                        }
-                                      }}
-                                    >
-                                      ↓
-                                    </Button>
-                                  )}
-                              </ButtonGroup>
-                            </Box>
-                          ))}
-                      </CardContent>
-                      <CardActions>
-                          <Button variant="contained" size="small" onClick={() => addStorage()}>
-                              追加
-                          </Button>
-                      </CardActions>
-                  </Card>}
+                              >
+                                ↑
+                              </Button>
+                            )}
+                            {req.disk?.length !== 1 &&
+                              req.disk?.length !== index + 1 && (
+                                <Button
+                                  size="small"
+                                  onClick={() => {
+                                    if (req.disk !== undefined) {
+                                      let newArr = req.disk.concat()
+                                      newArr[index + 1] = req.disk[index]
+                                      newArr[index] = req.disk[index + 1]
+                                      setReq({...req, disk: newArr})
+                                    }
+                                  }}
+                                >
+                                  ↓
+                                </Button>
+                              )}
+                          </ButtonGroup>
+                        </Box>
+                      ))}
+                  </CardContent>
+                  <CardActions>
+                    <Button variant="contained" size="small" onClick={() => addStorage()}>
+                      追加
+                    </Button>
+                  </CardActions>
+                </Card>}
               <br/>
               <Card sx={{marginLeft: 2, marginRight: 10, marginBottom: 1}}>
                 <CardContent>
@@ -1092,7 +1091,7 @@ export default function Create() {
                           <Select
                             labelId="nic-select-label"
                             id="nic-select"
-                            defaultValue={"none"}
+                            defaultValue={""}
                             value={nic.device ?? ''}
                             label="nic"
                             onChange={(event) => {
@@ -1123,104 +1122,104 @@ export default function Create() {
                         <br/>
                         {
                           req.is_cloudinit &&
-                            <Box>
-                                <Stack direction="row" spacing={0.5}>
-                                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                                    <TextField
-                                        required
-                                        id={"cloudinit_network_" + index + "_ip-address"}
-                                        label="IP Address"
-                                        sx={{width: '30ch'}}
-                                        value={nic.cloudinit?.address ?? ""}
-                                        onChange={(event) => {
-                                          let nics = req.nic?.concat() ?? []
-                                          nics[index] = {
-                                            ...nics[index] ?? {name: ""},
-                                            cloudinit: {
-                                              ...nics[index].cloudinit ?? {
-                                                name: "",
-                                                address: event.target.value,
-                                                gateway: "",
-                                                netmask: ""
-                                              },
-                                              address: event.target.value
-                                            }
-                                          }
-                                          setReq({...req, nic: nics})
-                                        }}
-                                    />
-                                    <TextField
-                                        required
-                                        id={"cloudinit_network_" + index + "_netmask"}
-                                        label="netmask"
-                                        sx={{width: '30ch'}}
-                                        value={nic.cloudinit?.netmask ?? ""}
-                                        onChange={(event) => {
-                                          let nics = req.nic?.concat() ?? []
-                                          nics[index] = {
-                                            ...nics[index] ?? {name: ""},
-                                            cloudinit: {
-                                              ...nics[index].cloudinit ?? {
-                                                name: "",
-                                                address: "",
-                                                gateway: "",
-                                                netmask: event.target.value
-                                              },
-                                              netmask: event.target.value
-                                            }
-                                          }
-                                          setReq({...req, nic: nics})
-                                        }}
-                                    />
-                                    <TextField
-                                        required
-                                        id={"cloudinit_network_" + index + "_gateway"}
-                                        label="gateway"
-                                        sx={{width: '30ch'}}
-                                        value={nic.cloudinit?.gateway ?? ""}
-                                        onChange={(event) => {
-                                          let nics = req.nic?.concat() ?? []
-                                          nics[index] = {
-                                            ...nics[index] ?? {name: ""},
-                                            cloudinit: {
-                                              ...nics[index].cloudinit ?? {
-                                                name: "",
-                                                address: "",
-                                                gateway: event.target.value,
-                                                netmask: ""
-                                              },
-                                              gateway: event.target.value
-                                            }
-                                          }
-                                          setReq({...req, nic: nics})
-                                        }}
-                                    />
-                                </Stack>
-                                <Typography variant="h6" component="div">DNS</Typography>
-                                <br/>
-                              {
-                                nic.cloudinit?.dns?.map((dns: string, index2) => (
-                                  <Chip key={"nic_" + index + "_cloudinit_dns_" + index2} color="primary"
-                                        label={dns}
-                                        sx={{marginRight: 0.5, marginBottom: 0.5}}
-                                        onDelete={() => deleteCloudinitDNS(index, index2)}/>
-                                ))
-                              }
-                                <Stack direction="row" spacing={1}>
-                                    <TextField
-                                        required
-                                        id={"nic_" + index + "_cloudinit_dns_input"}
-                                        label="dns"
-                                        sx={{m: 1, width: '30ch'}}
-                                        value={inputDNS}
-                                        onChange={(event) => {
-                                          setInputDNS(event.target.value)
-                                        }}
-                                    />
-                                    <Button size="small" variant="contained"
-                                            onClick={() => addCloudinitDNS(inputDNS, index)}>追加</Button>
-                                </Stack>
-                            </Box>
+                          <Box>
+                            <Stack direction="row" spacing={0.5}>
+                              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                              <TextField
+                                required
+                                id={"cloudinit_network_" + index + "_ip-address"}
+                                label="IP Address"
+                                sx={{width: '30ch'}}
+                                value={nic.cloudinit?.address ?? ""}
+                                onChange={(event) => {
+                                  let nics = req.nic?.concat() ?? []
+                                  nics[index] = {
+                                    ...nics[index] ?? {name: ""},
+                                    cloudinit: {
+                                      ...nics[index].cloudinit ?? {
+                                        name: "",
+                                        address: event.target.value,
+                                        gateway: "",
+                                        netmask: ""
+                                      },
+                                      address: event.target.value
+                                    }
+                                  }
+                                  setReq({...req, nic: nics})
+                                }}
+                              />
+                              <TextField
+                                required
+                                id={"cloudinit_network_" + index + "_netmask"}
+                                label="netmask"
+                                sx={{width: '30ch'}}
+                                value={nic.cloudinit?.netmask ?? ""}
+                                onChange={(event) => {
+                                  let nics = req.nic?.concat() ?? []
+                                  nics[index] = {
+                                    ...nics[index] ?? {name: ""},
+                                    cloudinit: {
+                                      ...nics[index].cloudinit ?? {
+                                        name: "",
+                                        address: "",
+                                        gateway: "",
+                                        netmask: event.target.value
+                                      },
+                                      netmask: event.target.value
+                                    }
+                                  }
+                                  setReq({...req, nic: nics})
+                                }}
+                              />
+                              <TextField
+                                required
+                                id={"cloudinit_network_" + index + "_gateway"}
+                                label="gateway"
+                                sx={{width: '30ch'}}
+                                value={nic.cloudinit?.gateway ?? ""}
+                                onChange={(event) => {
+                                  let nics = req.nic?.concat() ?? []
+                                  nics[index] = {
+                                    ...nics[index] ?? {name: ""},
+                                    cloudinit: {
+                                      ...nics[index].cloudinit ?? {
+                                        name: "",
+                                        address: "",
+                                        gateway: event.target.value,
+                                        netmask: ""
+                                      },
+                                      gateway: event.target.value
+                                    }
+                                  }
+                                  setReq({...req, nic: nics})
+                                }}
+                              />
+                            </Stack>
+                            <Typography variant="h6" component="div">DNS</Typography>
+                            <br/>
+                            {
+                              nic.cloudinit?.dns?.map((dns: string, index2) => (
+                                <Chip key={"nic_" + index + "_cloudinit_dns_" + index2} color="primary"
+                                      label={dns}
+                                      sx={{marginRight: 0.5, marginBottom: 0.5}}
+                                      onDelete={() => deleteCloudinitDNS(index, index2)}/>
+                              ))
+                            }
+                            <Stack direction="row" spacing={1}>
+                              <TextField
+                                required
+                                id={"nic_" + index + "_cloudinit_dns_input"}
+                                label="dns"
+                                sx={{m: 1, width: '30ch'}}
+                                value={inputDNS}
+                                onChange={(event) => {
+                                  setInputDNS(event.target.value)
+                                }}
+                              />
+                              <Button size="small" variant="contained"
+                                      onClick={() => addCloudinitDNS(inputDNS, index)}>追加</Button>
+                            </Stack>
+                          </Box>
                         }
                         {
                           index !== 0 && (
